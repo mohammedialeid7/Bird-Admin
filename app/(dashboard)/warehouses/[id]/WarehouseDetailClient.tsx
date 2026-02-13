@@ -35,7 +35,7 @@ export default function WarehouseDetailClient({ id }: { id: string }) {
     );
   }
 
-  const linkedZones = zones.filter((z) => z.warehouse_id === warehouse.id);
+  const linkedZones = zones.filter((z) => z.warehouse_ids.includes(warehouse.id));
   const linkedRiders = riders.filter((r) => r.warehouse_id === warehouse.id);
 
   const handleSave = () => {

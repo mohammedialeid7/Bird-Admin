@@ -20,7 +20,7 @@ export default function WarehousesPage() {
   const riders = useRiderStore((s) => s.riders);
 
   const getZoneCount = (whId: string) =>
-    zones.filter((z) => z.warehouse_id === whId).length;
+    zones.filter((z) => z.warehouse_ids.includes(whId)).length;
 
   const getRiderCount = (whId: string) =>
     riders.filter((r) => r.warehouse_id === whId).length;

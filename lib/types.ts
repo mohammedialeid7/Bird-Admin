@@ -14,7 +14,7 @@ export interface Warehouse {
 export interface Zone {
   id: string;
   name: string;
-  warehouse_id: string;
+  warehouse_ids: string[];
   polygon: GeoJSON.Polygon;
   created_at: string;
 }

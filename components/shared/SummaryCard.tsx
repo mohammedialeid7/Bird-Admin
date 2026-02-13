@@ -10,8 +10,8 @@ interface SummaryCardProps {
 
 export function SummaryCard({ title, value, icon, color }: SummaryCardProps) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-6">
+    <Card className="py-2">
+      <CardContent className="flex items-center gap-4 py-2 px-4">
         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
           {icon}
         </div>

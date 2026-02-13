@@ -47,7 +47,7 @@ export const mockZones: Zone[] = [
   {
     id: 'zone-001',
     name: 'Al Olaya Zone',
-    warehouse_id: 'wh-001',
+    warehouse_ids: ['wh-001'],
     polygon: {
       type: 'Polygon',
       coordinates: [[
@@ -60,7 +60,7 @@ export const mockZones: Zone[] = [
   {
     id: 'zone-002',
     name: 'Al Malaz Zone',
-    warehouse_id: 'wh-001',
+    warehouse_ids: ['wh-001'],
     polygon: {
       type: 'Polygon',
       coordinates: [[
@@ -73,7 +73,7 @@ export const mockZones: Zone[] = [
   {
     id: 'zone-003',
     name: 'Al Muruj Zone',
-    warehouse_id: 'wh-002',
+    warehouse_ids: ['wh-002'],
     polygon: {
       type: 'Polygon',
       coordinates: [[
@@ -86,7 +86,7 @@ export const mockZones: Zone[] = [
   {
     id: 'zone-004',
     name: 'Al Rawdah Zone',
-    warehouse_id: 'wh-002',
+    warehouse_ids: ['wh-002'],
     polygon: {
       type: 'Polygon',
       coordinates: [[
@@ -99,7 +99,7 @@ export const mockZones: Zone[] = [
   {
     id: 'zone-005',
     name: 'Al Aziziyah Zone',
-    warehouse_id: 'wh-003',
+    warehouse_ids: ['wh-003'],
     polygon: {
       type: 'Polygon',
       coordinates: [[
@@ -112,7 +112,7 @@ export const mockZones: Zone[] = [
   {
     id: 'zone-006',
     name: 'Al Shifa Zone',
-    warehouse_id: 'wh-003',
+    warehouse_ids: ['wh-003'],
     polygon: {
       type: 'Polygon',
       coordinates: [[

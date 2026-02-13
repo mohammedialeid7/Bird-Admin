@@ -21,8 +21,7 @@ export default function ZonesPage() {
   const riderZones = useRiderStore((s) => s.riderZones);
   const orders = useOrderStore((s) => s.orders);
 
-  const getWarehouseName = (id: string) =>
-    warehouses.find((w) => w.id === id)?.name ?? '—';
+
 
   const getRiderCount = (zoneId: string) =>
     riderZones.filter((rz) => rz.zone_id === zoneId).length;
@@ -59,7 +58,12 @@ export default function ZonesPage() {
                 onClick={() => router.push(`/zones/${zone.id}`)}
               >
                 <TableCell className="font-medium">{zone.name}</TableCell>
-                <TableCell>{getWarehouseName(zone.warehouse_id)}</TableCell>
+                <TableCell>
+                  {zone.warehouse_ids
+                    .map((id) => warehouses.find((w) => w.id === id)?.name)
+                    .filter(Boolean)
+                    .join(', ') || '—'}
+                </TableCell>
                 <TableCell>{getRiderCount(zone.id)}</TableCell>
                 <TableCell>{getActiveOrderCount(zone.id)}</TableCell>
               </TableRow>

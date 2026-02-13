@@ -201,9 +201,17 @@ export default function NewOrderPage() {
                   <SelectValue placeholder="Select warehouse" />
                 </SelectTrigger>
                 <SelectContent>
-                  {warehouses.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                  ))}
+                  {warehouses
+                    .filter(
+                      (w) =>
+                        !detectedZone ||
+                        detectedZone.warehouse_ids.includes(w.id)
+                    )
+                    .map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

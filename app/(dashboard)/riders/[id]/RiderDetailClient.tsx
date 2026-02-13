@@ -50,7 +50,12 @@ export default function RiderDetailClient({ id }: { id: string }) {
     .filter((rz) => rz.rider_id === rider.id)
     .map((rz) => rz.zone_id);
   const assignedZones = zones.filter((z) => assignedZoneIds.includes(z.id));
-  const unassignedZones = zones.filter((z) => !assignedZoneIds.includes(z.id));
+  const unassignedZones = zones.filter(
+    (z) =>
+      !assignedZoneIds.includes(z.id) &&
+      rider.warehouse_id &&
+      z.warehouse_ids.includes(rider.warehouse_id)
+  );
 
   const activeOrders = orders.filter(
     (o) =>

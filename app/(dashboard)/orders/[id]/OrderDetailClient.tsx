@@ -33,11 +33,14 @@ import { useWarehouseStore } from '@/stores/warehouse-store';
 import { useZoneStore } from '@/stores/zone-store';
 import { toast } from 'sonner';
 
+import { useShallow } from 'zustand/react/shallow';
+
+
 export default function OrderDetailClient({ id }: { id: string }) {
   const router = useRouter();
 
   const order = useOrderStore((s) => s.getOrderById(id));
-  const logs = useOrderStore((s) => s.getOrderLogs(id));
+  const logs = useOrderStore(useShallow((s) => s.getOrderLogs(id)));
   const proof = useOrderStore((s) => s.getOrderProof(id));
   const orders = useOrderStore((s) => s.orders);
   const cancelOrder = useOrderStore((s) => s.cancelOrder);

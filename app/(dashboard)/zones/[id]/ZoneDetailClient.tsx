@@ -43,13 +43,13 @@ export default function ZoneDetailClient({ id }: { id: string }) {
     );
   }
 
-  const warehouse = warehouses.find((w) => w.id === zone.warehouse_id);
+
   const assignedRiderIds = riderZonesAll
     .filter((rz) => rz.zone_id === zone.id)
     .map((rz) => rz.rider_id);
   const assignedRiders = riders.filter((r) => assignedRiderIds.includes(r.id));
   const unassignedRiders = riders.filter(
-    (r) => !assignedRiderIds.includes(r.id) && r.warehouse_id === zone.warehouse_id
+    (r) => !assignedRiderIds.includes(r.id) && r.warehouse_id && zone.warehouse_ids.includes(r.warehouse_id)
   );
 
   const coords = zone.polygon.coordinates[0];
@@ -98,8 +98,47 @@ export default function ZoneDetailClient({ id }: { id: string }) {
               <Input value={zoneName} onChange={(e) => setZoneName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Warehouse</Label>
-              <Input value={warehouse?.name ?? '—'} disabled />
+              <Label>Warehouses</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {zone.warehouse_ids.map((wId) => {
+                  const w = warehouses.find((wh) => wh.id === wId);
+                  return (
+                    <Badge key={wId} variant="secondary" className="flex items-center gap-1">
+                      {w?.name ?? wId}
+                      <button
+                        onClick={() => {
+                          const newIds = zone.warehouse_ids.filter((id) => id !== wId);
+                          updateZone(zone.id, { warehouse_ids: newIds });
+                          toast.success('Warehouse removed');
+                        }}
+                        className="ml-1 rounded-full hover:bg-muted p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+              <Select
+                onValueChange={(val) => {
+                  if (zone.warehouse_ids.includes(val)) return;
+                  updateZone(zone.id, { warehouse_ids: [...zone.warehouse_ids, val] });
+                  toast.success('Warehouse added');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add warehouse..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {warehouses
+                    .filter((w) => !zone.warehouse_ids.includes(w.id))
+                    .map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button onClick={handleSave}>Save Changes</Button>
           </CardContent>
