@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s \"c:\\\\Users\\\\m-i-e\\\\OneDrive\\\\سطح المكتب\\\\Bird Admin\")",
+      "Bash(npm install:*)"
+    ]
+  }
+}

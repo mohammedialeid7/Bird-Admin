@@ -1,0 +1,15 @@
+{
+  "/(dashboard)/orders/[id]/page": "app/(dashboard)/orders/[id]/page.js",
+  "/(dashboard)/orders/new/page": "app/(dashboard)/orders/new/page.js",
+  "/(dashboard)/orders/page": "app/(dashboard)/orders/page.js",
+  "/(dashboard)/page": "app/(dashboard)/page.js",
+  "/(dashboard)/riders/[id]/page": "app/(dashboard)/riders/[id]/page.js",
+  "/(dashboard)/riders/page": "app/(dashboard)/riders/page.js",
+  "/(dashboard)/warehouses/[id]/page": "app/(dashboard)/warehouses/[id]/page.js",
+  "/(dashboard)/warehouses/page": "app/(dashboard)/warehouses/page.js",
+  "/(dashboard)/zones/[id]/page": "app/(dashboard)/zones/[id]/page.js",
+  "/(dashboard)/zones/page": "app/(dashboard)/zones/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/login/page": "app/login/page.js"
+}
