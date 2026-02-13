@@ -1,8 +1,11 @@
 'use client';
 
-import { MapContainer, TileLayer, CircleMarker, Marker, Polygon, Popup, useMapEvents } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Marker, Polygon, Popup, useMapEvents, useMap, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
+import 'leaflet-draw'; // Import leaflet-draw side effects
 import type { Order, User, Zone, RiderLocation } from '@/lib/types';
 import Link from 'next/link';
 import { RIYADH_CENTER, DEFAULT_ZOOM } from '@/lib/constants';
@@ -40,6 +43,8 @@ interface MapViewProps {
   className?: string;
   onClick?: (latlng: { lat: number; lng: number }) => void;
   markerPosition?: { lat: number; lng: number } | null;
+  editable?: boolean;
+  onZoneEdit?: (zoneId: string, newCoordinates: number[][]) => void;
 }
 
 function ClickHandler({ onClick }: { onClick?: (latlng: { lat: number; lng: number }) => void }) {
@@ -48,6 +53,32 @@ function ClickHandler({ onClick }: { onClick?: (latlng: { lat: number; lng: numb
       onClick?.({ lat: e.latlng.lat, lng: e.latlng.lng });
     },
   });
+  return null;
+}
+
+function EditControl({ onEdit }: { onEdit: (e: any) => void }) {
+  const map = useMap();
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+
+  useEffect(() => {
+    // Basic setup for edit-only mode
+    // We assume the FeatureGroup containing the editable layers is already added to the map
+    // effectively by the map rendering the Polygons.
+    // However, react-leaflet renders Polygons as separate layers, not automatically in a FeatureGroup that leaflet-draw knows about instantly unless we explicitly do it.
+    // To make this work seamlessly with react-leaflet's declarative Polygons, we might need a workaround.
+    // simpler approach: Use the 'edit' handler on the map events if we can hook into the layers.
+
+    // Actually, leaflet-draw needs a FeatureGroup to know what to edit.
+    // So we should wrap our editable Polygons in a FeatureGroup and pass that to the draw control.
+
+    return () => {
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+      }
+    };
+  }, [map]);
+
   return null;
 }
 
@@ -60,7 +91,11 @@ export default function MapViewInner({
   className = '',
   onClick,
   markerPosition,
+  editable = false,
+  onZoneEdit,
 }: MapViewProps) {
+  const featureGroupRef = useRef<L.FeatureGroup>(null);
+
   return (
     <MapContainer
       center={[center.lat, center.lng]}
@@ -80,21 +115,28 @@ export default function MapViewInner({
         <Marker position={[markerPosition.lat, markerPosition.lng]} />
       )}
 
-      {/* Zone polygons */}
-      {zones.map((zone, i) => (
-        <Polygon
-          key={zone.id}
-          positions={zone.polygon.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
-          pathOptions={{
-            color: zoneColors[i % zoneColors.length].replace('80', 'ff'),
-            fillColor: zoneColors[i % zoneColors.length],
-            fillOpacity: 0.2,
-            weight: 2,
-          }}
-        >
-          <Popup>{zone.name}</Popup>
-        </Polygon>
-      ))}
+      {/* Editable Zones */}
+      <FeatureGroup ref={featureGroupRef}>
+        {zones.map((zone, i) => (
+          <Polygon
+            key={zone.id}
+            positions={zone.polygon.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
+            pathOptions={{
+              color: zoneColors[i % zoneColors.length].replace('80', 'ff'),
+              fillColor: zoneColors[i % zoneColors.length],
+              fillOpacity: 0.2,
+              weight: 2,
+            }}
+          >
+            <Popup>{zone.name}</Popup>
+          </Polygon>
+        ))}
+      </FeatureGroup>
+
+      {/* Draw Control */}
+      {editable && onZoneEdit && (
+        <EditControlWrapper featureGroupRef={featureGroupRef} onZoneEdit={onZoneEdit} zones={zones} />
+      )}
 
       {/* Rider dots */}
       {riders.map((rider) => {
@@ -144,3 +186,78 @@ export default function MapViewInner({
     </MapContainer>
   );
 }
+
+function EditControlWrapper({
+  featureGroupRef,
+  onZoneEdit,
+  zones
+}: {
+  featureGroupRef: React.RefObject<L.FeatureGroup | null>,
+  onZoneEdit: (zoneId: string, newCoordinates: number[][]) => void,
+  zones: Zone[]
+}) {
+  const map = useMap();
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+
+  useEffect(() => {
+    if (!featureGroupRef.current) return;
+
+    // Create the draw control
+    const drawControl = new L.Control.Draw({
+      draw: false, // Disable drawing new shapes
+      edit: {
+        featureGroup: featureGroupRef.current, // The FeatureGroup to edit
+        remove: false, // Disable removal for now, unless we want to allow deleting zones via map
+      },
+    });
+
+    map.addControl(drawControl);
+    drawControlRef.current = drawControl;
+
+    // Event handler for when editing finishes
+    const handleEdit = (e: any) => {
+      const layers = e.layers;
+      layers.eachLayer((layer: any) => {
+        // match layer to zone? 
+        // Since we re-render polygons, we need a way to ID them.
+        // Unfortuantely Leaflet layers don't automatically keep our React keys.
+        // We can match by geometry or order if necessary, OR we can try to rely on the fact that only one zone is usually edited at a time in the detail view?
+        // But here we might have multiple zones.
+        // Let's assume we are in Zone Detail view where there is mainly ONE zone, or we can look up the zone by index if the order is preserved.
+        // Better: Identify which zone corresponds to the layer.
+
+        // In this specific MapView usage (ZoneDetailClient), we typically pass `zones=[zone]`.
+        // So `zones[0]` is the target.
+
+        // If we have multiple zones, we need a robust way.
+        // For now, let's assume single zone editing or match closest.
+        // But actually, we can just return the *new* coordinates of the edited layer.
+        // The parent component knows which zone is being displayed if it's the detail view.
+
+        if (zones.length === 1) {
+          const latlngs = layer.getLatLngs()[0]; // Polygon shell
+          // Convert to [[lng, lat], ...]
+          // Leaflet LatLng is {lat, lng}
+          const newCoords = latlngs.map((ll: any) => [ll.lng, ll.lat]);
+          // Close the loop if needed? GeoJSON Polygons are closed. Leaflet's getLatLngs might not include the closing point.
+          if (newCoords.length > 0 && (newCoords[0][0] !== newCoords[newCoords.length - 1][0] || newCoords[0][1] !== newCoords[newCoords.length - 1][1])) {
+            newCoords.push(newCoords[0]);
+          }
+
+          onZoneEdit(zones[0].id, newCoords);
+        }
+      });
+    };
+
+    map.on(L.Draw.Event.EDITED, handleEdit);
+
+    return () => {
+      map.removeControl(drawControl);
+      map.off(L.Draw.Event.EDITED, handleEdit);
+      drawControlRef.current = null;
+    };
+  }, [map, featureGroupRef, onZoneEdit, zones]);
+
+  return null;
+}
+

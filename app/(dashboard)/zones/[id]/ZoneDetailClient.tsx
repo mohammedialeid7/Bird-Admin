@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, X, Plus } from 'lucide-react';
+import { ArrowLeft, X, Save, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +32,9 @@ export default function ZoneDetailClient({ id }: { id: string }) {
   const removeRiderZone = useRiderStore((s) => s.removeRiderZone);
 
   const [zoneName, setZoneName] = useState(zone?.name ?? '');
-  const [addRiderId, setAddRiderId] = useState('');
+  const [isEditingMap, setIsEditingMap] = useState(false);
+  // Store the temporary polygon loop (array of [lng, lat])
+  const [tempPolygonLoop, setTempPolygonLoop] = useState<number[][] | null>(null);
 
   if (!zone) {
     return (
@@ -52,20 +54,22 @@ export default function ZoneDetailClient({ id }: { id: string }) {
     (r) => !assignedRiderIds.includes(r.id) && r.warehouse_id && zone.warehouse_ids.includes(r.warehouse_id)
   );
 
-  const coords = zone.polygon.coordinates[0];
-  const centerLat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-  const centerLng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+  const unassignedWarehouses = warehouses.filter((w) => !zone.warehouse_ids.includes(w.id));
 
-  const handleSave = () => {
-    updateZone(zone.id, { name: zoneName });
-    toast.success('Zone updated');
-  };
+  // Determine which coordinates to display
+  const currentCoords = tempPolygonLoop ? tempPolygonLoop : zone.polygon.coordinates[0];
 
-  const handleAddRider = () => {
-    if (!addRiderId) return;
-    addRiderZone(addRiderId, zone.id);
-    setAddRiderId('');
-    toast.success('Rider added to zone');
+  // Calculate center based on current coordinates
+  const centerLat = currentCoords.reduce((s, c) => s + c[1], 0) / currentCoords.length;
+  const centerLng = currentCoords.reduce((s, c) => s + c[0], 0) / currentCoords.length;
+
+  // Construct the zone object to pass to MapView
+  const displayZone = {
+    ...zone,
+    polygon: {
+      ...zone.polygon,
+      coordinates: [currentCoords],
+    },
   };
 
   const handleRemoveRider = (riderId: string) => {
@@ -73,17 +77,69 @@ export default function ZoneDetailClient({ id }: { id: string }) {
     toast.success('Rider removed from zone');
   };
 
+  const handleStartEditing = () => {
+    setTempPolygonLoop(zone.polygon.coordinates[0]);
+    setIsEditingMap(true);
+    toast.info('Drag the polygon points to resize or move the zone');
+  };
+
+  const handleCancelEditing = () => {
+    setTempPolygonLoop(null);
+    setIsEditingMap(false);
+  };
+
+  const handleSaveMap = () => {
+    if (tempPolygonLoop) {
+      updateZone(zone.id, {
+        polygon: {
+          type: 'Polygon',
+          coordinates: [tempPolygonLoop],
+        },
+      });
+      toast.success('Zone layout updated');
+    }
+    setTempPolygonLoop(null);
+    setIsEditingMap(false);
+  };
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => router.push('/zones')}>
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Zones
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={() => router.push('/zones')}>
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back to Zones
+        </Button>
+        <div className="flex items-center gap-2">
+          {isEditingMap ? (
+            <>
+              <Button variant="outline" size="sm" onClick={handleCancelEditing}>
+                <X className="w-4 h-4 mr-1" /> Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveMap}>
+                <Save className="w-4 h-4 mr-1" /> Save Layout
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={handleStartEditing}>
+              <Pencil className="w-4 h-4 mr-1" /> Edit Zone Layout
+            </Button>
+          )}
+        </div>
+      </div>
 
-      <div className="h-[70vh] rounded-lg overflow-hidden border">
+      <div className={`h-[70vh] rounded-lg overflow-hidden border relative ${isEditingMap ? 'ring-2 ring-primary' : ''}`}>
+        {isEditingMap && (
+          <div className="absolute top-4 right-4 z-[1000] bg-background/90 backdrop-blur px-3 py-1.5 rounded-md shadow text-sm font-medium border animate-in fade-in slide-in-from-top-2">
+            Editing Mode Active
+          </div>
+        )}
         <MapView
           center={{ lat: centerLat, lng: centerLng }}
           zoom={13}
-          zones={[zone]}
+          zones={[displayZone]}
+          editable={isEditingMap}
+          onZoneEdit={(zoneId, newCoords) => {
+            setTempPolygonLoop(newCoords);
+          }}
         />
       </div>
 
@@ -95,7 +151,21 @@ export default function ZoneDetailClient({ id }: { id: string }) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Zone Name</Label>
-              <Input value={zoneName} onChange={(e) => setZoneName(e.target.value)} />
+              <Input
+                value={zoneName}
+                onChange={(e) => setZoneName(e.target.value)}
+                onBlur={() => {
+                  if (zoneName !== zone.name) {
+                    updateZone(zone.id, { name: zoneName });
+                    toast.success('Zone updated');
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
             </div>
             <div className="space-y-2">
               <Label>Warehouses</Label>
@@ -103,7 +173,7 @@ export default function ZoneDetailClient({ id }: { id: string }) {
                 {zone.warehouse_ids.map((wId) => {
                   const w = warehouses.find((wh) => wh.id === wId);
                   return (
-                    <Badge key={wId} variant="secondary" className="flex items-center gap-1">
+                    <Badge key={wId} variant="outline" className="flex items-center gap-1">
                       {w?.name ?? wId}
                       <button
                         onClick={() => {
@@ -119,28 +189,29 @@ export default function ZoneDetailClient({ id }: { id: string }) {
                   );
                 })}
               </div>
-              <Select
-                onValueChange={(val) => {
-                  if (zone.warehouse_ids.includes(val)) return;
-                  updateZone(zone.id, { warehouse_ids: [...zone.warehouse_ids, val] });
-                  toast.success('Warehouse added');
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Add warehouse..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {warehouses
-                    .filter((w) => !zone.warehouse_ids.includes(w.id))
-                    .map((w) => (
-                      <SelectItem key={w.id} value={w.id}>
-                        {w.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              {unassignedWarehouses.length > 0 && (
+                <Select
+                  key={zone.warehouse_ids.join(',')}
+                  onValueChange={(val) => {
+                    if (zone.warehouse_ids.includes(val)) return;
+                    updateZone(zone.id, { warehouse_ids: [...zone.warehouse_ids, val] });
+                    toast.success('Warehouse added');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Add warehouse..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unassignedWarehouses
+                      .map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-            <Button onClick={handleSave}>Save Changes</Button>
           </CardContent>
         </Card>
 
@@ -166,21 +237,24 @@ export default function ZoneDetailClient({ id }: { id: string }) {
               )}
             </div>
             {unassignedRiders.length > 0 && (
-              <div className="flex gap-2">
-                <Select value={addRiderId} onValueChange={setAddRiderId}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Add rider..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unassignedRiders.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>{r.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={handleAddRider} disabled={!addRiderId}>
-                  <Plus className="w-4 h-4 mr-1" /> Add
-                </Button>
-              </div>
+              <Select
+                key={assignedRiderIds.join(',')}
+                onValueChange={(val) => {
+                  addRiderZone(val, zone.id);
+                  toast.success('Rider added to zone');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add rider..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {unassignedRiders.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </CardContent>
         </Card>
