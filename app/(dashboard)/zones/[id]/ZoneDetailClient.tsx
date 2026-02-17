@@ -51,7 +51,7 @@ export default function ZoneDetailClient({ id }: { id: string }) {
     .map((rz) => rz.rider_id);
   const assignedRiders = riders.filter((r) => assignedRiderIds.includes(r.id));
   const unassignedRiders = riders.filter(
-    (r) => !assignedRiderIds.includes(r.id) && r.warehouse_id && zone.warehouse_ids.includes(r.warehouse_id)
+    (r) => !assignedRiderIds.includes(r.id)
   );
 
   const unassignedWarehouses = warehouses.filter((w) => !zone.warehouse_ids.includes(w.id));

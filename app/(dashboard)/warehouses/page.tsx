@@ -17,13 +17,16 @@ export default function WarehousesPage() {
   const router = useRouter();
   const warehouses = useWarehouseStore((s) => s.warehouses);
   const zones = useZoneStore((s) => s.zones);
-  const riders = useRiderStore((s) => s.riders);
+  const riderZones = useRiderStore((s) => s.riderZones);
 
   const getZoneCount = (whId: string) =>
     zones.filter((z) => z.warehouse_ids.includes(whId)).length;
 
-  const getRiderCount = (whId: string) =>
-    riders.filter((r) => r.warehouse_id === whId).length;
+  const getRiderCount = (whId: string) => {
+    const whZoneIds = zones.filter((z) => z.warehouse_ids.includes(whId)).map((z) => z.id);
+    const riderIds = new Set(riderZones.filter((rz) => whZoneIds.includes(rz.zone_id)).map((rz) => rz.rider_id));
+    return riderIds.size;
+  };
 
   return (
     <div className="space-y-6">

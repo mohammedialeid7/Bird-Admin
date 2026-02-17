@@ -24,7 +24,6 @@ export interface User {
   full_name: string;
   role: 'admin' | 'rider';
   phone: string;
-  warehouse_id: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -96,7 +95,6 @@ export interface OrderFilters {
 }
 
 export interface RiderFilters {
-  warehouseId?: string;
   zoneId?: string;
   activeOnly?: boolean;
 }

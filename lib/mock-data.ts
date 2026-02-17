@@ -9,7 +9,6 @@ export const mockAdminUser: User = {
   full_name: 'Admin User',
   role: 'admin',
   phone: '+966500000000',
-  warehouse_id: null,
   is_active: true,
   created_at: '2024-01-01T00:00:00Z',
 };
@@ -126,14 +125,14 @@ export const mockZones: Zone[] = [
 
 // ── Riders ──────────────────────────────────────────────────────
 export const mockRiders: User[] = [
-  { id: 'rider-001', full_name: 'Ahmed Al-Rashidi', role: 'rider', phone: '+966501111111', warehouse_id: 'wh-001', is_active: true, created_at: '2024-02-01T00:00:00Z' },
-  { id: 'rider-002', full_name: 'Mohammed Al-Ghamdi', role: 'rider', phone: '+966502222222', warehouse_id: 'wh-001', is_active: true, created_at: '2024-02-01T00:00:00Z' },
-  { id: 'rider-003', full_name: 'Khalid Al-Otaibi', role: 'rider', phone: '+966503333333', warehouse_id: 'wh-002', is_active: true, created_at: '2024-02-05T00:00:00Z' },
-  { id: 'rider-004', full_name: 'Faisal Al-Harbi', role: 'rider', phone: '+966504444444', warehouse_id: 'wh-002', is_active: true, created_at: '2024-02-05T00:00:00Z' },
-  { id: 'rider-005', full_name: 'Sultan Al-Zahrani', role: 'rider', phone: '+966505555555', warehouse_id: 'wh-003', is_active: true, created_at: '2024-02-10T00:00:00Z' },
-  { id: 'rider-006', full_name: 'Nasser Al-Dossari', role: 'rider', phone: '+966506666666', warehouse_id: 'wh-001', is_active: false, created_at: '2024-02-10T00:00:00Z' },
-  { id: 'rider-007', full_name: 'Omar Al-Shehri', role: 'rider', phone: '+966507777777', warehouse_id: 'wh-002', is_active: false, created_at: '2024-02-15T00:00:00Z' },
-  { id: 'rider-008', full_name: 'Turki Al-Mutairi', role: 'rider', phone: '+966508888888', warehouse_id: 'wh-003', is_active: false, created_at: '2024-02-15T00:00:00Z' },
+  { id: 'rider-001', full_name: 'Ahmed Al-Rashidi', role: 'rider', phone: '+966501111111', is_active: true, created_at: '2024-02-01T00:00:00Z' },
+  { id: 'rider-002', full_name: 'Mohammed Al-Ghamdi', role: 'rider', phone: '+966502222222', is_active: true, created_at: '2024-02-01T00:00:00Z' },
+  { id: 'rider-003', full_name: 'Khalid Al-Otaibi', role: 'rider', phone: '+966503333333', is_active: true, created_at: '2024-02-05T00:00:00Z' },
+  { id: 'rider-004', full_name: 'Faisal Al-Harbi', role: 'rider', phone: '+966504444444', is_active: true, created_at: '2024-02-05T00:00:00Z' },
+  { id: 'rider-005', full_name: 'Sultan Al-Zahrani', role: 'rider', phone: '+966505555555', is_active: true, created_at: '2024-02-10T00:00:00Z' },
+  { id: 'rider-006', full_name: 'Nasser Al-Dossari', role: 'rider', phone: '+966506666666', is_active: false, created_at: '2024-02-10T00:00:00Z' },
+  { id: 'rider-007', full_name: 'Omar Al-Shehri', role: 'rider', phone: '+966507777777', is_active: false, created_at: '2024-02-15T00:00:00Z' },
+  { id: 'rider-008', full_name: 'Turki Al-Mutairi', role: 'rider', phone: '+966508888888', is_active: false, created_at: '2024-02-15T00:00:00Z' },
 ];
 
 // ── Rider Zones ─────────────────────────────────────────────────

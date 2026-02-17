@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useWarehouseStore } from '@/stores/warehouse-store';
 import { useZoneStore } from '@/stores/zone-store';
 import { useRiderStore } from '@/stores/rider-store';
 import { useOrderStore } from '@/stores/order-store';
@@ -17,13 +16,9 @@ import type { User } from '@/lib/types';
 
 export function RiderTable({ riders }: { riders: User[] }) {
   const router = useRouter();
-  const warehouses = useWarehouseStore((s) => s.warehouses);
   const zones = useZoneStore((s) => s.zones);
   const riderZones = useRiderStore((s) => s.riderZones);
   const orders = useOrderStore((s) => s.orders);
-
-  const getWarehouseName = (id: string | null) =>
-    id ? (warehouses.find((w) => w.id === id)?.name ?? '—') : '—';
 
   const getZoneNames = (riderId: string) => {
     const zoneIds = riderZones
@@ -56,8 +51,7 @@ export function RiderTable({ riders }: { riders: User[] }) {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Phone</TableHead>
-            <TableHead className="hidden md:table-cell">Warehouse</TableHead>
-            <TableHead className="hidden lg:table-cell">Zones</TableHead>
+            <TableHead className="hidden md:table-cell">Zones</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Active Orders</TableHead>
           </TableRow>
@@ -71,10 +65,7 @@ export function RiderTable({ riders }: { riders: User[] }) {
             >
               <TableCell className="font-medium">{rider.full_name}</TableCell>
               <TableCell className="text-sm">{rider.phone}</TableCell>
-              <TableCell className="hidden md:table-cell text-sm">
-                {getWarehouseName(rider.warehouse_id)}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell text-sm max-w-[200px] truncate">
+              <TableCell className="hidden md:table-cell text-sm max-w-[200px] truncate">
                 {getZoneNames(rider.id)}
               </TableCell>
               <TableCell>

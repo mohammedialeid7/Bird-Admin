@@ -20,6 +20,7 @@ export default function WarehouseDetailClient({ id }: { id: string }) {
   const updateWarehouse = useWarehouseStore((s) => s.updateWarehouse);
   const zones = useZoneStore((s) => s.zones);
   const riders = useRiderStore((s) => s.riders);
+  const riderZones = useRiderStore((s) => s.riderZones);
 
   const [name, setName] = useState(warehouse?.name ?? '');
   const [address, setAddress] = useState(warehouse?.short_national_address ?? '');
@@ -36,7 +37,9 @@ export default function WarehouseDetailClient({ id }: { id: string }) {
   }
 
   const linkedZones = zones.filter((z) => z.warehouse_ids.includes(warehouse.id));
-  const linkedRiders = riders.filter((r) => r.warehouse_id === warehouse.id);
+  const linkedZoneIds = linkedZones.map((z) => z.id);
+  const linkedRiderIds = new Set(riderZones.filter((rz) => linkedZoneIds.includes(rz.zone_id)).map((rz) => rz.rider_id));
+  const linkedRiders = riders.filter((r) => linkedRiderIds.has(r.id));
 
   const handleSave = () => {
     updateWarehouse(warehouse.id, { name, short_national_address: address });

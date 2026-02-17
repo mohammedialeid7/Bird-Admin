@@ -17,7 +17,6 @@ import { OrderTable } from '@/components/orders/OrderTable';
 import { MapView } from '@/components/map/MapView';
 import { useRiderStore } from '@/stores/rider-store';
 import { useOrderStore } from '@/stores/order-store';
-import { useWarehouseStore } from '@/stores/warehouse-store';
 import { useZoneStore } from '@/stores/zone-store';
 import { toast } from 'sonner';
 
@@ -29,7 +28,6 @@ export default function RiderDetailClient({ id }: { id: string }) {
   const addRiderZone = useRiderStore((s) => s.addRiderZone);
   const removeRiderZone = useRiderStore((s) => s.removeRiderZone);
   const orders = useOrderStore((s) => s.orders);
-  const warehouses = useWarehouseStore((s) => s.warehouses);
   const zones = useZoneStore((s) => s.zones);
 
   const [addZoneId, setAddZoneId] = useState('');
@@ -45,16 +43,12 @@ export default function RiderDetailClient({ id }: { id: string }) {
     );
   }
 
-  const warehouse = warehouses.find((w) => w.id === rider.warehouse_id);
   const assignedZoneIds = riderZonesAll
     .filter((rz) => rz.rider_id === rider.id)
     .map((rz) => rz.zone_id);
   const assignedZones = zones.filter((z) => assignedZoneIds.includes(z.id));
   const unassignedZones = zones.filter(
-    (z) =>
-      !assignedZoneIds.includes(z.id) &&
-      rider.warehouse_id &&
-      z.warehouse_ids.includes(rider.warehouse_id)
+    (z) => !assignedZoneIds.includes(z.id)
   );
 
   const activeOrders = orders.filter(
@@ -93,9 +87,6 @@ export default function RiderDetailClient({ id }: { id: string }) {
           <CardContent className="space-y-3">
             <p className="text-xl font-semibold">{rider.full_name}</p>
             <p className="text-sm text-muted-foreground">{rider.phone}</p>
-            <p className="text-sm text-muted-foreground">
-              {warehouse?.name ?? '—'}
-            </p>
             <Badge variant={rider.is_active ? 'default' : 'secondary'}>
               {rider.is_active ? 'Active' : 'Offline'}
             </Badge>

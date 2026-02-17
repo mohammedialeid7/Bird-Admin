@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
   const filteredZones = useMemo(() => {
     if (selectedWarehouse !== 'all') {
-      return zones.filter((z) => z.warehouse_id === selectedWarehouse);
+      return zones.filter((z) => z.warehouse_ids.includes(selectedWarehouse));
     }
     return zones;
   }, [zones, selectedWarehouse]);
