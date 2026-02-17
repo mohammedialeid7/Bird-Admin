@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(dir /s \"c:\\\\Users\\\\m-i-e\\\\OneDrive\\\\سطح المكتب\\\\Bird Admin\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx next build:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

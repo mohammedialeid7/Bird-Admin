@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, X, Save, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,8 @@ export default function ZoneDetailClient({ id }: { id: string }) {
 
   const [zoneName, setZoneName] = useState(zone?.name ?? '');
   const [isEditingMap, setIsEditingMap] = useState(false);
-  // Store the temporary polygon loop (array of [lng, lat])
-  const [tempPolygonLoop, setTempPolygonLoop] = useState<number[][] | null>(null);
+  // Store the function to get current coordinates from the map
+  const getCurrentCoordsRef = useRef<(() => number[][] | null) | null>(null);
 
   if (!zone) {
     return (
@@ -56,8 +56,7 @@ export default function ZoneDetailClient({ id }: { id: string }) {
 
   const unassignedWarehouses = warehouses.filter((w) => !zone.warehouse_ids.includes(w.id));
 
-  // Determine which coordinates to display
-  const currentCoords = tempPolygonLoop ? tempPolygonLoop : zone.polygon.coordinates[0];
+  const currentCoords = zone.polygon.coordinates[0];
 
   // Calculate center based on current coordinates
   const centerLat = currentCoords.reduce((s, c) => s + c[1], 0) / currentCoords.length;
@@ -78,28 +77,34 @@ export default function ZoneDetailClient({ id }: { id: string }) {
   };
 
   const handleStartEditing = () => {
-    setTempPolygonLoop(zone.polygon.coordinates[0]);
+    // Don't set tempPolygonLoop - we'll read coordinates directly from the map when saving
     setIsEditingMap(true);
     toast.info('Drag the polygon points to resize or move the zone');
   };
 
   const handleCancelEditing = () => {
-    setTempPolygonLoop(null);
     setIsEditingMap(false);
   };
 
   const handleSaveMap = () => {
-    if (tempPolygonLoop) {
+    // Read coordinates from the map while editing is still active
+    const coordsToSave = getCurrentCoordsRef.current?.() ?? null;
+
+    if (coordsToSave) {
+      // Update the store first (while editing is still active and coords are valid),
+      // then exit edit mode. The Polygon will re-render with the new store coordinates.
       updateZone(zone.id, {
         polygon: {
           type: 'Polygon',
-          coordinates: [tempPolygonLoop],
+          coordinates: [coordsToSave],
         },
       });
+      setIsEditingMap(false);
       toast.success('Zone layout updated');
+    } else {
+      toast.error('Could not save zone changes - no coordinates available');
+      setIsEditingMap(false);
     }
-    setTempPolygonLoop(null);
-    setIsEditingMap(false);
   };
 
   return (
@@ -137,8 +142,9 @@ export default function ZoneDetailClient({ id }: { id: string }) {
           zoom={13}
           zones={[displayZone]}
           editable={isEditingMap}
-          onZoneEdit={(zoneId, newCoords) => {
-            setTempPolygonLoop(newCoords);
+          onGetCurrentCoordinates={(callback) => {
+            console.log('[ZoneDetail] Received getCurrentCoordinates callback from MapView');
+            getCurrentCoordsRef.current = callback;
           }}
         />
       </div>

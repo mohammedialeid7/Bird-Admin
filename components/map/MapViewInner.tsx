@@ -45,6 +45,7 @@ interface MapViewProps {
   markerPosition?: { lat: number; lng: number } | null;
   editable?: boolean;
   onZoneEdit?: (zoneId: string, newCoordinates: number[][]) => void;
+  onGetCurrentCoordinates?: (callback: () => number[][] | null) => void;
 }
 
 function ClickHandler({ onClick }: { onClick?: (latlng: { lat: number; lng: number }) => void }) {
@@ -56,31 +57,6 @@ function ClickHandler({ onClick }: { onClick?: (latlng: { lat: number; lng: numb
   return null;
 }
 
-function EditControl({ onEdit }: { onEdit: (e: any) => void }) {
-  const map = useMap();
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
-
-  useEffect(() => {
-    // Basic setup for edit-only mode
-    // We assume the FeatureGroup containing the editable layers is already added to the map
-    // effectively by the map rendering the Polygons.
-    // However, react-leaflet renders Polygons as separate layers, not automatically in a FeatureGroup that leaflet-draw knows about instantly unless we explicitly do it.
-    // To make this work seamlessly with react-leaflet's declarative Polygons, we might need a workaround.
-    // simpler approach: Use the 'edit' handler on the map events if we can hook into the layers.
-
-    // Actually, leaflet-draw needs a FeatureGroup to know what to edit.
-    // So we should wrap our editable Polygons in a FeatureGroup and pass that to the draw control.
-
-    return () => {
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-        drawControlRef.current = null;
-      }
-    };
-  }, [map]);
-
-  return null;
-}
 
 export default function MapViewInner({
   center = RIYADH_CENTER,
@@ -93,6 +69,7 @@ export default function MapViewInner({
   markerPosition,
   editable = false,
   onZoneEdit,
+  onGetCurrentCoordinates,
 }: MapViewProps) {
   const featureGroupRef = useRef<L.FeatureGroup>(null);
 
@@ -134,8 +111,12 @@ export default function MapViewInner({
       </FeatureGroup>
 
       {/* Draw Control */}
-      {editable && onZoneEdit && (
-        <EditControlWrapper featureGroupRef={featureGroupRef} onZoneEdit={onZoneEdit} zones={zones} />
+      {editable && (
+        <EditControlWrapper
+          featureGroupRef={featureGroupRef}
+          zones={zones}
+          onGetCurrentCoordinates={onGetCurrentCoordinates}
+        />
       )}
 
       {/* Rider dots */}
@@ -189,75 +170,89 @@ export default function MapViewInner({
 
 function EditControlWrapper({
   featureGroupRef,
-  onZoneEdit,
-  zones
+  zones,
+  onGetCurrentCoordinates
 }: {
   featureGroupRef: React.RefObject<L.FeatureGroup | null>,
-  onZoneEdit: (zoneId: string, newCoordinates: number[][]) => void,
-  zones: Zone[]
+  zones: Zone[],
+  onGetCurrentCoordinates?: (callback: () => number[][] | null) => void
 }) {
   const map = useMap();
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const editingLayerRef = useRef<L.Polygon | null>(null);
 
   useEffect(() => {
     if (!featureGroupRef.current) return;
 
-    // Create the draw control
-    const drawControl = new L.Control.Draw({
-      draw: false, // Disable drawing new shapes
-      edit: {
-        featureGroup: featureGroupRef.current, // The FeatureGroup to edit
-        remove: false, // Disable removal for now, unless we want to allow deleting zones via map
-      },
-    });
+    // No L.Control.Draw toolbar — the app's custom UI handles edit/save/cancel.
+    // We programmatically enable editing on the polygon layer instead.
+    // Wait a tick for react-leaflet to finish rendering the <Polygon> into the FeatureGroup.
+    const timerId = setTimeout(() => {
+      if (!featureGroupRef.current) return;
 
-    map.addControl(drawControl);
-    drawControlRef.current = drawControl;
+      const layers = featureGroupRef.current.getLayers();
+      if (layers.length === 0) return;
 
-    // Event handler for when editing finishes
-    const handleEdit = (e: any) => {
-      const layers = e.layers;
-      layers.eachLayer((layer: any) => {
-        // match layer to zone? 
-        // Since we re-render polygons, we need a way to ID them.
-        // Unfortuantely Leaflet layers don't automatically keep our React keys.
-        // We can match by geometry or order if necessary, OR we can try to rely on the fact that only one zone is usually edited at a time in the detail view?
-        // But here we might have multiple zones.
-        // Let's assume we are in Zone Detail view where there is mainly ONE zone, or we can look up the zone by index if the order is preserved.
-        // Better: Identify which zone corresponds to the layer.
+      const layer = layers[0] as L.Polygon;
+      if (!layer || !(layer as any).editing) return;
 
-        // In this specific MapView usage (ZoneDetailClient), we typically pass `zones=[zone]`.
-        // So `zones[0]` is the target.
+      (layer as any).editing.enable();
+      editingLayerRef.current = layer;
+    }, 50);
 
-        // If we have multiple zones, we need a robust way.
-        // For now, let's assume single zone editing or match closest.
-        // But actually, we can just return the *new* coordinates of the edited layer.
-        // The parent component knows which zone is being displayed if it's the detail view.
+    // Function to get current coordinates from the polygon
+    const getCurrentCoordinates = (): number[][] | null => {
+      if (zones.length !== 1 || !featureGroupRef.current) {
+        return null;
+      }
 
-        if (zones.length === 1) {
-          const latlngs = layer.getLatLngs()[0]; // Polygon shell
-          // Convert to [[lng, lat], ...]
-          // Leaflet LatLng is {lat, lng}
-          const newCoords = latlngs.map((ll: any) => [ll.lng, ll.lat]);
-          // Close the loop if needed? GeoJSON Polygons are closed. Leaflet's getLatLngs might not include the closing point.
-          if (newCoords.length > 0 && (newCoords[0][0] !== newCoords[newCoords.length - 1][0] || newCoords[0][1] !== newCoords[newCoords.length - 1][1])) {
-            newCoords.push(newCoords[0]);
-          }
+      const layers = featureGroupRef.current.getLayers();
+      const layer = layers[0] as any;
+      if (!layer) return null;
 
-          onZoneEdit(zones[0].id, newCoords);
+      // When editing is enabled, layer.editing.latlngs is the mutable reference
+      // that tracks dragged vertex positions in real-time.
+      let rawLatLngs: any;
+      if (layer.editing && layer.editing._enabled) {
+        rawLatLngs = layer.editing.latlngs;
+      } else {
+        rawLatLngs = layer.getLatLngs();
+      }
+
+      // Unwrap nested arrays until we find LatLng objects (with .lat property)
+      let latlngs: any[] = rawLatLngs;
+      while (latlngs.length > 0 && Array.isArray(latlngs[0]) && !('lat' in latlngs[0])) {
+        latlngs = latlngs[0];
+      }
+
+      if (!latlngs || latlngs.length < 3) return null;
+
+      // Convert to [[lng, lat], ...] (GeoJSON format)
+      const newCoords = latlngs.map((ll: any) => [ll.lng, ll.lat]);
+
+      // Close the loop if needed (GeoJSON polygons must have first == last point)
+      if (newCoords.length > 0) {
+        const first = newCoords[0];
+        const last = newCoords[newCoords.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          newCoords.push([first[0], first[1]]);
         }
-      });
+      }
+
+      return newCoords;
     };
 
-    map.on(L.Draw.Event.EDITED, handleEdit);
+    if (onGetCurrentCoordinates) {
+      onGetCurrentCoordinates(getCurrentCoordinates);
+    }
 
     return () => {
-      map.removeControl(drawControl);
-      map.off(L.Draw.Event.EDITED, handleEdit);
-      drawControlRef.current = null;
+      clearTimeout(timerId);
+      if (editingLayerRef.current && (editingLayerRef.current as any).editing) {
+        (editingLayerRef.current as any).editing.disable();
+        editingLayerRef.current = null;
+      }
     };
-  }, [map, featureGroupRef, onZoneEdit, zones]);
+  }, [map, featureGroupRef, onGetCurrentCoordinates, zones]);
 
   return null;
 }
-
